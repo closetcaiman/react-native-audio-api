@@ -87,7 +87,6 @@ jobs:
         run: exit 1 # this should never happen
 
       - name: Build package
-        id: build
         working-directory: ${{ env.AUDIO_API_DIR }}
         run: |
           if [[ "${{ inputs.latest-build }}" != "true" && "${{ inputs.old-version-patch }}" != "true" ]]; then
@@ -96,23 +95,6 @@ jobs:
             ./scripts/create-package.sh
           fi
 
-      - name: Check if any node_modules were packed
-        id: check_node_modules
-        working-directory: ${{ env.AUDIO_API_DIR }}
-        run: >-
-          ! grep --silent -E "node_modules/.+" build.log
-
-      - name: Show build log
-        working-directory: ${{ env.AUDIO_API_DIR }}
-        if: failure() && steps.build.outcome == 'failure'
-        run: cat build.log
-
-      - name: Show packed node_modules
-        working-directory: ${{ env.AUDIO_API_DIR }}
-        if: failure() && steps.node_modules.outcome == 'failure'
-        run: >-
-          ! grep -E "node_modules/.+" build.log
-
       - name: Add package name to env
         working-directory: ${{ env.AUDIO_API_DIR }}
         run: echo "PACKAGE_NAME=$(ls -l | egrep -o "react-native-audio-api-(.*)(=?\.tgz)")" >> $GITHUB_ENV
@@ -120,6 +102,15 @@ jobs:
       - name: Assert package name
         if: ${{ env.PACKAGE_NAME == 'PLACEHOLDER' }}
         run: exit 1 # this should never happen
+
+      - name: Check that no node_modules were packed
+        working-directory: ${{ env.AUDIO_API_DIR }}
+        run: |
+          tar -tzf "$PACKAGE_NAME" > packed-files.txt
+          if grep -E '/node_modules/' packed-files.txt; then
+            echo "::error::$PACKAGE_NAME contains node_modules (listed above)"
+            exit 1
+          fi
 
       - name: Upload package to GitHub
         uses: actions/upload-artifact@v4
