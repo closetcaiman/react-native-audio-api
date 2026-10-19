@@ -120,6 +120,3 @@ jobs:
 
       - name: Move package to monorepo root
         run: mv ${{ env.AUDIO_API_DIR }}/${{ env.PACKAGE_NAME }} .
-
-      - name: Publish package to npm
-        run: npm publish $PACKAGE_NAME --tag ${{ env.TAG }} --provenance
